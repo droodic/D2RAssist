@@ -48,11 +48,11 @@ namespace D2RAssist.Helpers
         public static class MapPointsOfInterest
         {
             public static readonly string[] Chests = { "5", "6", "87", "104", "105", "106", "107", "143", "140", "141", "144", "146", "147", "148", "176", "177", "181", "183", "198", "240", "241", "242", "243", "329", "330", "331", "332", "333", "334", "335", "336", "354", "355", "356", "371", "387", "389", "390", "391", "397", "405", "406", "407", "413", "420", "424", "425", "430", "431", "432", "433", "454", "455", "501", "502", "504", "505", "580", "581", };
-            public static readonly string[] Quests = { "61", "152", "266","357", "356", "354", "355", "376" };
+            public static readonly string[] Quests = { "61", "152", "266", "357", "356", "354", "355", "376" };
             public static readonly string[] Waypoints = { "182", "298", "119", "145", "156", "157", "238", "237", "288", "323", "324", "398", "402", "429", "494", "496", "511", "539", "59", "60", "100" };
             public static readonly string[] TalTombs = { "66", "67", "68", "69", "70", "71", "72" };
         }
-            
+
         private static Bitmap CreateFilledRectangle(Color color, int width, int height)
         {
             Bitmap rectangle = new Bitmap(width, height, PixelFormat.Format32bppArgb);
@@ -192,19 +192,12 @@ namespace D2RAssist.Helpers
             return (int)(_int * _double);
         }
 
-        private static void DrawArrows(int miniMapPlayerX, int miniMapPlayerY, Graphics minimap, double multiplier, MapData mapData)
+        private static int GetLineCount(MapData mapData)
         {
-            int originX = mapData.levelOrigin.x;
-            int originY = mapData.levelOrigin.y;
-            // Setting up resuable pen
-            AdjustableArrowCap bigArrow = new AdjustableArrowCap(Settings.Map.ArrowThickness, Settings.Map.ArrowThickness);
-            Pen pen = new Pen(Color.Transparent, Settings.Map.ArrowThickness);
-            pen.CustomEndCap = bigArrow;
-
-            // Exits
+            int lineCounter = 0;
             foreach (KeyValuePair<string, AdjacentLevel> i in mapData.adjacentLevels)
             {
-                if (mapData.adjacentLevels[i.Key].exits.Length == 0 || !Settings.Map.DrawExitArrow)
+                if (mapData.adjacentLevels[i.Key].exits.Length == 0 || !Settings.Map.DrawNextArrow)
                 {
                     continue;
                 }
@@ -216,18 +209,78 @@ namespace D2RAssist.Helpers
                         continue;
                     }
                 }
+                lineCounter++;
+
+            }
+
+            return lineCounter;
+        }
+
+        private static void DrawArrows(int miniMapPlayerX, int miniMapPlayerY, Graphics minimap, double multiplier, MapData mapData)
+        {
+            int originX = mapData.levelOrigin.x;
+            int originY = mapData.levelOrigin.y;
+
+            // Setting up resuable pen
+            AdjustableArrowCap bigArrow = new AdjustableArrowCap(Settings.Map.ArrowThickness, Settings.Map.ArrowThickness);
+            Pen pen = new Pen(Color.Transparent, Settings.Map.ArrowThickness);
+            pen.CustomEndCap = bigArrow;
+
+            // Exits
+            int exitCounter = 0;
+            int lineCountPreview = GetLineCount(mapData);
+
+            foreach (KeyValuePair<string, AdjacentLevel> i in mapData.adjacentLevels)
+            {
+                if (mapData.adjacentLevels[i.Key].exits.Length == 0 || !Settings.Map.DrawNextArrow)
+                {
+                    continue;
+                }
+                if (MapPointsOfInterest.TalTombs.Contains(i.Key))
+                {
+                    TombCheck(i.Key);
+                    if (TombID == "0" || i.Key != TombID)
+                    {
+                        continue;
+                    }
+                }
+
                 int x = mapData.adjacentLevels[i.Key].exits[0].x;
                 int y = mapData.adjacentLevels[i.Key].exits[0].y;
                 int coordX = (int)((x - originX) * multiplier);
                 int coordY = (int)((y - originY) * multiplier);
 
-                // Draw arrow
-                pen.Color = Settings.Map.Colors.ArrowExit;
-                minimap.DrawLine(pen, miniMapPlayerX, miniMapPlayerY, coordX, coordY);
+                //If there is only 1 line to be drawn, set as ArrowNext (main exit)
+                if (lineCountPreview == 1)
+                {
+                    pen.Color = Settings.Map.Colors.ArrowNext;
+                    minimap.DrawLine(pen, miniMapPlayerX, miniMapPlayerY, coordX, coordY);
+                    Console.WriteLine("Draw arrow next line call");
+                }
+
+                //If there are multiple lines to be drawn, differentiate between main exit & other exits
+                else
+                {
+                    if (exitCounter == 0 && Settings.Map.DrawOtherExitArrows)
+                    {
+                        //Draw other / previous exit arrow (in a different color, if toggled)
+                        pen.Color = Settings.Map.Colors.ArrowOther;
+                        minimap.DrawLine(pen, miniMapPlayerX, miniMapPlayerY, coordX, coordY);
+                    }
+                    else if (exitCounter > 0 && Settings.Map.DrawNextArrow)
+                    {
+                        //Draw main exit arrow - should always be pointing towards next floor if there is one
+                        pen.Color = Settings.Map.Colors.ArrowNext;
+                        minimap.DrawLine(pen, miniMapPlayerX, miniMapPlayerY, coordX, coordY);
+                    }
+                    exitCounter++;
+                }
+
                 // Draw label
                 DrawLabelAt("Area", i.Key, coordX, coordY, minimap);
+
             }
-            
+
             bool waypointFound = false;
             foreach (KeyValuePair<string, XY[]> mapObject in mapData.objects)
             {
@@ -271,30 +324,33 @@ namespace D2RAssist.Helpers
 
         private static void DrawLabelAt(string objectType, string objectKey, int posx, int posy, Graphics minimap)
         {
-            minimap.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
-            // Create font and brush.
-            Font drawFont = new Font(Settings.Map.LabelFont, 10);
-            SolidBrush drawBrush = new SolidBrush(Settings.Map.Colors.LabelColor);
-            // Set format of string.
-            StringFormat drawFormat = new StringFormat();
-            drawFormat.FormatFlags = StringFormatFlags.NoClip;
-            // Draw label line
-            int adjustment = 20;
-            Pen p = new Pen(Settings.Map.Colors.LabelColor, 1);
-            minimap.DrawLine(p, posx + adjustment, posy - (adjustment), posx, posy);
-            // Label box
-            RectangleF rectangleF = new RectangleF(posx + adjustment, posy - (2 * adjustment), 100, 100);
-            if (objectType == "Area")
+            if (Settings.Map.DrawLabels)
             {
-                string objName = Enum.GetName(typeof(Game.Area), Int32.Parse(objectKey));
-                objName = Game.AreaName[Int32.Parse(objectKey)];
-                minimap.DrawString(objName, drawFont, drawBrush, rectangleF, drawFormat);
-            }
-            if (objectType == "GameObject")
-            {
-                string objName = Enum.GetName(typeof(Game.GameObject), Int32.Parse(objectKey));
-                if (objName.Contains("Waypoint")) objName = "Waypoint";
-                minimap.DrawString(objName, drawFont, drawBrush, rectangleF, drawFormat);
+                minimap.TextRenderingHint = System.Drawing.Text.TextRenderingHint.SingleBitPerPixelGridFit;
+                // Create font and brush.
+                Font drawFont = new Font(Settings.Map.LabelFont, 10);
+                SolidBrush drawBrush = new SolidBrush(Settings.Map.Colors.LabelColor);
+                // Set format of string.
+                StringFormat drawFormat = new StringFormat();
+                drawFormat.FormatFlags = StringFormatFlags.NoClip;
+                // Draw label line
+                int adjustment = 20;
+                Pen p = new Pen(Settings.Map.Colors.LabelColor, 1);
+                minimap.DrawLine(p, posx + adjustment, posy - (adjustment), posx, posy);
+                // Label box
+                RectangleF rectangleF = new RectangleF(posx + adjustment, posy - (2 * adjustment), 100, 100);
+                if (objectType == "Area")
+                {
+                    string objName = Enum.GetName(typeof(Game.Area), Int32.Parse(objectKey));
+                    objName = Game.AreaName[Int32.Parse(objectKey)];
+                    minimap.DrawString(objName, drawFont, drawBrush, rectangleF, drawFormat);
+                }
+                if (objectType == "GameObject")
+                {
+                    string objName = Enum.GetName(typeof(Game.GameObject), Int32.Parse(objectKey));
+                    if (objName.Contains("Waypoint")) objName = "Waypoint";
+                    minimap.DrawString(objName, drawFont, drawBrush, rectangleF, drawFormat);
+                }
             }
         }
     }

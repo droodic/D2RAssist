@@ -44,7 +44,8 @@ namespace D2RAssist.Types
                 public static readonly Color Waypoint = ColorTranslator.FromHtml(ConfigurationManager.AppSettings["Waypoint"]);
                 public static readonly Color Player = ColorTranslator.FromHtml(ConfigurationManager.AppSettings["Player"]);
                 public static readonly Color SuperChest = ColorTranslator.FromHtml(ConfigurationManager.AppSettings["SuperChest"]);
-                public static readonly Color ArrowExit = ColorTranslator.FromHtml(ConfigurationManager.AppSettings["ArrowExit"]);
+                public static readonly Color ArrowNext = ColorTranslator.FromHtml(ConfigurationManager.AppSettings["ArrowNext"]);
+                public static readonly Color ArrowOther = ColorTranslator.FromHtml(ConfigurationManager.AppSettings["ArrowOther"]);
                 public static readonly Color ArrowQuest = ColorTranslator.FromHtml(ConfigurationManager.AppSettings["ArrowQuest"]);
                 public static readonly Color ArrowWaypoint = ColorTranslator.FromHtml(ConfigurationManager.AppSettings["ArrowWaypoint"]);
                 public static readonly Color LabelColor = ColorTranslator.FromHtml(ConfigurationManager.AppSettings["LabelColor"]);
@@ -80,9 +81,11 @@ namespace D2RAssist.Types
             public static bool Rotate = Convert.ToBoolean(ConfigurationManager.AppSettings["Rotate"]);
             public static string LabelFont = ConfigurationManager.AppSettings["LabelFont"];
             public static int ArrowThickness = Convert.ToInt16(ConfigurationManager.AppSettings["ArrowThickness"]);
-            public static bool DrawExitArrow = Convert.ToBoolean(ConfigurationManager.AppSettings["DrawExitArrow"]);
+            public static bool DrawNextArrow = Convert.ToBoolean(ConfigurationManager.AppSettings["DrawNextArrow"]);
+            public static bool DrawOtherExitArrows = Convert.ToBoolean(ConfigurationManager.AppSettings["DrawOtherExitArrows"]);
             public static bool DrawQuestArrow = Convert.ToBoolean(ConfigurationManager.AppSettings["DrawQuestArrow"]);
             public static bool DrawWaypointArrow = Convert.ToBoolean(ConfigurationManager.AppSettings["DrawWaypointArrow"]);
+            public static bool DrawLabels = Convert.ToBoolean(ConfigurationManager.AppSettings["DrawLabels"]);
         }
 
         public static class Api
